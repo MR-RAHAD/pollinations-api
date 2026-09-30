@@ -224,6 +224,16 @@ open("sunset.jpg", "wb").write(img["content"])
 
 ---
 
+## 💖 Support
+
+If you like this project and want more upgraded projects in the future:
+
+- ⭐ **Star this repository** — your star keeps me motivated to build and share more
+- 💬 **Want a custom project built for you?** Message me on Telegram: [@rabbyhosainRahad](https://t.me/rabbyhosainRahad)
+- 💰 Please note: custom project development is a **paid service**
+
+---
+
 ## 📄 License
 
 This project is licensed under the [MIT License](LICENSE).
