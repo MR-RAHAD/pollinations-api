@@ -37,12 +37,16 @@ class PollinationsClient:
         self.session.headers.update(BROWSER_HEADERS)
 
     def ask(self, message: str, model: str = DEFAULT_TEXT_MODEL,
-            history: list | None = None, stream: bool = False) -> dict:
+            history: list | None = None, stream: bool = False,
+            system_prompt: str | None = None) -> dict:
         message = (message or "").strip()
         if not message:
             raise PollinationsError("empty message")
 
         messages = []
+        if system_prompt and system_prompt.strip():
+            messages.append({"role": "system",
+                             "content": system_prompt.strip()})
         for h in (history or [])[-10:]:
             if isinstance(h, dict) and h.get("role") and h.get("content"):
                 messages.append({"role": h["role"], "content": h["content"]})
