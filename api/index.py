@@ -14,6 +14,7 @@ Endpoints:
 import os
 import sys
 import time
+import json
 
 from flask import Flask, Response, jsonify, request
 
@@ -65,20 +66,44 @@ def index():
 
 
 @app.post("/chat")
-def chat():
+def chat_post():
     denied = _check_api_key()
     if denied:
         return denied
-
     data = request.get_json(silent=True) or {}
-    message = (data.get("message") or "").strip()
-    if not message:
-        return jsonify({"error": "missing 'message' in JSON body"}), 400
+    return _do_chat(
+        message=(data.get("message") or "").strip(),
+        history=data.get("history") or [],
+        model=(data.get("model") or "openai").strip() or "openai",
+    )
 
-    history = data.get("history") or []
+
+@app.get("/chat")
+def chat_get():
+    denied = _check_api_key()
+    if denied:
+        return denied
+    q = request.args
+    history = []
+    raw_history = (q.get("history") or "").strip()
+    if raw_history:
+        try:
+            history = json.loads(raw_history)
+        except (ValueError, TypeError):
+            return jsonify({"error": "'history' must be a JSON array string"}), 400
+    return _do_chat(
+        message=(q.get("message") or "").strip(),
+        history=history,
+        model=(q.get("model") or "openai").strip() or "openai",
+    )
+
+
+def _do_chat(message, history, model):
+    if not message:
+        return jsonify({"error": "missing 'message'"}), 400
+
     if not isinstance(history, list):
         return jsonify({"error": "'history' must be a list of {role, content}"}), 400
-    model = (data.get("model") or "openai").strip() or "openai"
 
     client = PollinationsClient()
     try:
