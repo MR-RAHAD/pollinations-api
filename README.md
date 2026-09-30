@@ -1,180 +1,235 @@
-# Pollinations API
+<div align="center">
 
-[![Deploy](https://img.shields.io/badge/deploy-vercel-black)](https://vercel.com)
-[![Python](https://img.shields.io/badge/python-3.12-blue)](https://www.python.org)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+# 🎨 Pollinations API
 
-A clean, key-guarded HTTP API for [pollinations.ai](https://pollinations.ai) —
-**AI chat and image generation** through a single deployable service. No
-upstream account or token required.
+**Free AI chat & image generation — one clean HTTP API.**
 
-Built with Flask and deployed as a Vercel serverless function.
+[![Vercel](https://img.shields.io/badge/Deployed_on-Vercel-000000?style=for-the-badge&logo=vercel)](https://vercel.com)
+[![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org)
+[![Flask](https://img.shields.io/badge/Flask-3.x-000000?style=for-the-badge&logo=flask)](https://flask.palletsprojects.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-00C853?style=for-the-badge)](LICENSE)
+
+*Powered by [pollinations.ai](https://pollinations.ai) — no account, no token, no sign-up needed upstream.*
+
+[Features](#-features) • [Quick Start](#-quick-start) • [API Reference](#-api-reference) • [Deployment](#-deployment) • [License](#-license)
+
+</div>
 
 ---
 
-## Features
+## ✨ Features
 
-- 💬 **Chat** — conversational AI with history support (OpenAI-compatible upstream)
-- 🎨 **Image generation** — text-to-image via the `flux` model (more models supported)
-- 🔑 **API key guard** — `x-api-key` header + per-key rate limiting
-- ⚡ **Serverless-ready** — one-click deploy to Vercel
+| | |
+|---|---|
+| 💬 **AI Chat** | Conversational AI with full history support |
+| 🎨 **Image Generation** | Text-to-image via `flux` and more models |
+| 🔑 **Key Guard** | `x-api-key` header + per-key rate limiting |
+| ⚡ **Serverless** | One-click deploy to Vercel — zero config |
+| 🐍 **Standalone Client** | Use `core/` directly, no Flask required |
 
-## Endpoints
+---
 
-| Method    | Path      | Description                                        |
-|-----------|-----------|----------------------------------------------------|
-| `GET`     | `/`       | Service info and endpoint list                     |
-| `GET/POST`| `/chat`   | Chat completion                                    |
-| `GET/POST`| `/image`  | Image generation (bytes or JSON URL)               |
-| `GET`     | `/models` | Available text models                              |
+## 🚀 Quick Start
+
+```bash
+# 💬 Chat
+curl -X POST https://<your-project>.vercel.app/chat \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: <redacted> \
+  -d '{"message": "Write a haiku about the ocean"}'
+
+# 🎨 Image
+curl -X POST https://<your-project>.vercel.app/image \
+  -H 'Content-Type: application/json' \
+  -H 'x-api-key: <redacted> \
+  -d '{"prompt": "a cat astronaut", "width": 512, "height": 512}' \
+  -o cat.png
+```
+
+> Replace `<your-project>` with your Vercel deployment URL and `<redacted> with your API key.
+
+---
+
+## 📖 API Reference
 
 All endpoints except `/` require the `x-api-key` header.
 
-### Chat
+### Endpoints
 
-**POST** `/chat` — JSON body:
+| Method | Path | Description |
+|:------:|------|-------------|
+| `GET` | `/` | Service info & endpoint list |
+| `GET` `POST` | `/chat` | Chat completion |
+| `GET` `POST` | `/image` | Image generation |
+| `GET` | `/models` | Available text models |
 
-```json
+### 💬 Chat — `POST /chat`
+
+```jsonc
 {
-  "message": "Hello!",
-  "model": "openai",
-  "history": [
-    {"role": "user", "content": "Hi"},
-    {"role": "assistant", "content": "Hello!"}
+  "message": "Hello!",          // required
+  "model": "openai",            // optional, default "openai"
+  "history": [                  // optional, for multi-turn conversations
+    { "role": "user", "content": "Hi" },
+    { "role": "assistant", "content": "Hello!" }
   ]
 }
 ```
 
-**GET** `/chat?message=Hello!&model=openai` also works
-(`history` as a JSON-encoded query param).
+<details>
+<summary><b>GET alternative</b></summary>
 
-Response:
+```
+/chat?message=Hello!&model=openai
+```
 
-```json
+Pass `history` as a JSON-encoded query parameter for multi-turn chats.
+
+</details>
+
+**Response**
+
+```jsonc
 {
   "response": "Hi there! How can I help?",
   "model": "gpt-oss-20b",
-  "history": [...]
+  "history": [ /* updated conversation */ ]
 }
 ```
 
-### Image
+### 🎨 Image — `POST /image`
 
-**POST** `/image` — JSON body (or **GET** with query params):
-
-```json
+```jsonc
 {
-  "prompt": "a cat astronaut",
-  "width": 1024,
-  "height": 1024,
-  "model": "flux",
-  "seed": 42,
-  "nologo": true
+  "prompt": "a cat astronaut",  // required
+  "width": 1024,               // optional, 64–2048, default 1024
+  "height": 1024,              // optional, 64–2048, default 1024
+  "model": "flux",             // optional, default "flux"
+  "seed": 42,                  // optional, for reproducible results
+  "nologo": true,              // optional, default true
+  "format": "url"              // optional — return JSON instead of bytes
 }
 ```
 
-Returns raw image bytes by default. Add `"format": "url"` (or
-`?format=url`) to get JSON instead:
+**Response (default):** raw image bytes (`image/jpeg`).
 
-```json
+**Response (`format: "url"`):**
+
+```jsonc
 {
   "image_url": "https://image.pollinations.ai/prompt/...",
   "content_type": "image/jpeg"
 }
 ```
 
-## Quick start
+<details>
+<summary><b>More examples</b></summary>
 
 ```bash
-# Chat (POST)
-curl -s -X POST https://<your-project>.vercel.app/chat \
+# GET image
+curl 'https://<your-project>.vercel.app/image?prompt=a%20sunset&width=512' \
+  -H 'x-api-key: <redacted> -o sunset.png
+
+# Image as URL (no bytes proxied)
+curl -X POST https://<your-project>.vercel.app/image \
   -H 'Content-Type: application/json' \
   -H 'x-api-key: <redacted> \
-  -d '{"message": "Write a haiku about the ocean"}'
+  -d '{"prompt": "a cat astronaut", "format": "url"}'
 
-# Chat (GET)
-curl -s 'https://<your-project>.vercel.app/chat?message=Hello' \
-  -H 'x-api-key: <redacted>
-
-# Image (POST → saves JPEG)
-curl -s -X POST https://<your-project>.vercel.app/image \
-  -H 'Content-Type: application/json' \
-  -H 'x-api-key: <redacted> \
-  -d '{"prompt": "a cat astronaut", "width": 512, "height": 512}' \
-  -o cat.png
-
-# Image (GET)
-curl -s 'https://<your-project>.vercel.app/image?prompt=a%20cat&width=512' \
-  -H 'x-api-key: <redacted> -o cat.png
-
-# Models
-curl -s https://<your-project>.vercel.app/models \
+# Available models
+curl https://<your-project>.vercel.app/models \
   -H 'x-api-key: <redacted>
 ```
 
-## Deployment
+</details>
 
-### Option A — Vercel CLI
+### ⚠️ Rate limits
+
+| Limit | Value |
+|-------|-------|
+| Per-key | 30 requests / 60 seconds |
+| Upstream burst | HTTP `429` if pollinations throttles anonymous traffic |
+
+---
+
+## 🛠️ Deployment
+
+### Vercel CLI
 
 ```bash
+git clone https://github.com/MR-RAHAD/pollinations-api.git
 cd pollinations-api
 vercel          # link / create project
 vercel --prod   # deploy
 ```
 
-### Option B — GitHub
+### GitHub Import
 
-1. Push this folder to a GitHub repo
+1. Fork or push this repo to GitHub
 2. Vercel → **Add New** → **Project** → **Import** the repo
-3. Deploy — no build configuration needed
+3. Deploy — no build settings needed ✨
 
-### Environment variables
+### 🔧 Environment variables
 
-| Variable                  | Required | Default | Description                          |
-|---------------------------|----------|---------|--------------------------------------|
-| `API_KEY`                 | No       | —       | Your own guard key (added to allowed keys) |
-| `POLL_RATE_LIMIT`         | No       | `30`    | Max requests per key per window      |
-| `POLL_RATE_WINDOW_SECONDS`| No       | `60`    | Rate-limit window in seconds         |
+| Variable | Required | Default | Description |
+|----------|:--------:|:-------:|-------------|
+| `API_KEY` | No | — | Your own guard key (added to the allowed list) |
+| `POLL_RATE_LIMIT` | No | `30` | Max requests per key per window |
+| `POLL_RATE_WINDOW_SECONDS` | No | `60` | Rate-limit window in seconds |
 
-Set them in Vercel → Project → Settings → Environment Variables, then redeploy.
+Set them in **Vercel → Project → Settings → Environment Variables**, then redeploy.
 
-## Project structure
+---
+
+## 📁 Project structure
 
 ```
 pollinations-api/
 ├── api/
-│   └── index.py              # Flask app: routes, key guard, rate limiting
+│   └── index.py                 # Flask app — routes, key guard, rate limiting
 ├── core/
 │   └── core/
 │       ├── __init__.py
-│       └── pollinations.py   # Upstream client (chat + image)
-├── vercel.json               # Serverless function config
+│       └── pollinations.py      # Upstream client — chat + image
+├── vercel.json                  # Serverless function config
 ├── requirements.txt
+├── LICENSE
 └── README.md
 ```
 
-The `core/` client works standalone — no Flask needed:
+### 🐍 Standalone usage
+
+The `core/` client works without Flask:
 
 ```python
 from core.core.pollinations import PollinationsClient
 
 client = PollinationsClient()
-print(client.ask("Hello!")["response"])
-img = client.image("a sunset over mountains")
+
+# Chat
+print(client.ask("Tell me a joke")["response"])
+
+# Image
+img = client.image("a sunset over mountains", width=1024, height=1024)
 open("sunset.jpg", "wb").write(img["content"])
 ```
 
-## Notes
+---
 
-- The upstream service is free and anonymous. The default **30 req / 60s**
-  per-key limit keeps usage fair.
-- Pollinations rate-limits anonymous IPs under heavy bursts (HTTP 402,
-  recovers in ~60s). This API maps that to **HTTP 429** so clients can
-  back off gracefully.
-- Default text model: `openai`. Default image model: `flux`.
-- If pollinations.ai changes its endpoints, update
-  `core/core/pollinations.py` from the live site.
+## 📝 Notes
 
-## License
+- Upstream ([pollinations.ai](https://pollinations.ai)) is **free and anonymous** — no account needed.
+- Default text model: `openai` · Default image model: `flux`.
+- If pollinations.ai changes its endpoints, update `core/core/pollinations.py` from the live site.
 
-MIT
+---
+
+## 📄 License
+
+This project is licensed under the [MIT License](LICENSE).
+
+<div align="center">
+
+**Built with ❤️ by [Mohammad Rahad](https://github.com/MR-RAHAD)**
+
+</div>
