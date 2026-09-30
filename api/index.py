@@ -36,11 +36,20 @@ DEFAULT_SYSTEM_PROMPT = (
     "প্রতিটি বার্তার শেষে বা মাঝে উপযুক্ত ইমোজি যোগ করবে। 😊💬"
 )
 
-SYSTEM_PROMPT = (
-    os.getenv("SYSTEM_PROMPT", "").strip()
-    or _load_system_prompt()
-    or DEFAULT_SYSTEM_PROMPT
-)
+def _build_system_prompt():
+    override = os.getenv("SYSTEM_PROMPT", "").strip()
+    if override:
+        return override
+    parts = []
+    txt_prompt = _load_system_prompt()
+    if txt_prompt:
+        parts.append(txt_prompt)
+    if DEFAULT_SYSTEM_PROMPT:
+        parts.append(DEFAULT_SYSTEM_PROMPT)
+    return "\n\n".join(parts)
+
+
+SYSTEM_PROMPT = _build_system_prompt()
 
 
 def _check_api_key():
