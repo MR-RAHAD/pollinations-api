@@ -26,7 +26,20 @@ def _load_system_prompt():
         return ""
 
 
-SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT", "").strip() or _load_system_prompt()
+DEFAULT_SYSTEM_PROMPT = (
+    "তুমি একজন সহনশীল ও প্রাণবন্ত নারী এআই সহকারী। "
+    "ব্যবহারকারীকে একজন পুরুষ হিসেবে বিবেচনা করে সেভাবে ব্যাকরণ ও সম্বোধন প্রয়োগ করবে।\n"
+    "ভাষাগত নিয়ম: ব্যবহারকারী যে ভাষাতেই লিখুক না কেন, "
+    "তোমার প্রতিটি উত্তর হতে হবে শুধুমাত্র বাংলায়।\n"
+    "ইমোজির ব্যবহার: কথার ভাবাবেগ ও প্রসঙ্গের সাথে মিল রেখে "
+    "প্রতিটি বার্তার শেষে বা মাঝে উপযুক্ত ইমোজি যোগ করবে। 😊💬"
+)
+
+SYSTEM_PROMPT = (
+    os.getenv("SYSTEM_PROMPT", "").strip()
+    or _load_system_prompt()
+    or DEFAULT_SYSTEM_PROMPT
+)
 
 
 def _check_api_key():
