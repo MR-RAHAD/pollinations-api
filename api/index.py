@@ -1,16 +1,3 @@
-"""pollinations-api — HTTP wrapper around pollinations.ai (free, no auth upstream).
-
-Deployed on Vercel as a Python serverless function (Flask auto-detected).
-Stateless: the caller passes conversation history with each request.
-
-Endpoints:
-  POST /chat   {"message": str, "model": "openai", "history": [...]}
-  POST /image  {"prompt": str, "width": 1024, "height": 1024,
-                "model": "flux", "seed": 42, "nologo": true}
-               → returns the image bytes directly (or ?format=url for JSON)
-  GET  /models → upstream text model list
-"""
-
 import os
 import sys
 import time
@@ -23,17 +10,14 @@ from core import PollinationsClient, PollinationsError  # noqa: E402
 
 app = Flask(__name__)
 
-# Built-in API keys (also accepts the API_KEY env var if set).
 API_KEYS = {"rahad", "rahad1", "rahad2"}
 
-# Simple per-key rate limit: 30 requests / 60s (in-memory, best-effort).
 RATE_LIMIT = int(os.getenv("POLL_RATE_LIMIT", "30"))
 RATE_WINDOW = int(os.getenv("POLL_RATE_WINDOW_SECONDS", "60"))
 _hits: dict = {}
 
 
 def _check_api_key():
-    """Guard: the x-api-key header must match a built-in key or API_KEY env."""
     allowed = set(API_KEYS)
     extra = os.environ.get("API_KEY", "").strip()
     if extra:
@@ -56,10 +40,10 @@ def index():
     return jsonify({
         "service": "pollinations-api",
         "status": "ok",
-        "upstream": "pollinations.ai (free, no key)",
+        "upstream": "pollinations.ai",
         "endpoints": {
-            "/chat": "POST {message, model?, history?}",
-            "/image": "POST {prompt, width?, height?, model?, seed?, nologo?}",
+            "/chat": "GET/POST {message, model?, history?}",
+            "/image": "GET/POST {prompt, width?, height?, model?, seed?, nologo?, format?}",
             "/models": "GET",
         },
     })
@@ -109,7 +93,6 @@ def _do_chat(message, history, model):
     try:
         result = client.ask(message, model=model, history=history)
     except PollinationsError as e:
-        # Upstream anonymous quota hit -> tell the caller to back off.
         status = 429 if "402" in str(e) else 502
         return jsonify({"error": str(e)}), status
 
@@ -133,15 +116,13 @@ def image():
         return denied
 
     data = request.get_json(silent=True) or {}
-    # Also accept GET query params for convenience.
     q = request.args
     prompt = (data.get("prompt") or q.get("prompt") or "").strip()
     if not prompt:
         return jsonify({"error": "missing 'prompt'"}), 400
 
     def _param(name, default):
-        v = data.get(name, q.get(name, default))
-        return v
+        return data.get(name, q.get(name, default))
 
     client = PollinationsClient()
     try:
@@ -179,6 +160,5 @@ def models():
         return jsonify({"error": str(e)}), 502
 
 
-# Vercel exposes `app`; local dev can run this file directly.
 if __name__ == "__main__":
     app.run(port=int(os.environ.get("PORT", 3000)))
