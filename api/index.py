@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "core"))
 from core import PollinationsClient, PollinationsError  # noqa: E402
 
 app = Flask(__name__)
+app.json.ensure_ascii = False
 
 API_KEYS = {"rahad", "rahad1", "rahad2"}
 
