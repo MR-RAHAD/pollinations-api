@@ -1,23 +1,3 @@
-"""Unofficial pollinations.ai API client.
-
-Pollinations exposes OPEN endpoints - no login, no token, no PoW, no signing:
-
-  Text (OpenAI-compatible, SSE streaming supported):
-    POST https://text.pollinations.ai/openai
-    {"model": "openai", "messages": [{"role": "user", "content": "..."}],
-     "stream": false}
-
-  Text (simple GET):
-    GET https://text.pollinations.ai/<url-encoded prompt>?model=openai
-
-  Image:
-    GET https://image.pollinations.ai/prompt/<url-encoded prompt>
-        ?width=1024&height=1024&model=flux&nologo=true&seed=42
-
-This client uses the OpenAI-compatible POST for chat (supports history and
-model selection) and the GET image endpoint for generation.
-"""
-
 from urllib.parse import quote
 
 from curl_cffi import requests
@@ -28,12 +8,11 @@ IMAGE_BASE = "https://image.pollinations.ai"
 OPENAI_PATH = "/openai"
 MODELS_PATH = "/models"
 
-DEFAULT_TEXT_MODEL = "openai"   # alias for the default reasoning model
+DEFAULT_TEXT_MODEL = "openai"
 DEFAULT_IMAGE_MODEL = "flux"
 
-# (connect, read) - never hang: a stalled upstream must fail fast.
 TIMEOUT = (10, 30)
-IMAGE_TIMEOUT = (10, 60)  # image gen can take longer than text
+IMAGE_TIMEOUT = (10, 60)
 
 BROWSER_HEADERS = {
     "User-Agent": (
@@ -52,24 +31,13 @@ class PollinationsError(Exception):
 
 
 class PollinationsClient:
-    """Minimal client for pollinations.ai text + image endpoints."""
-
     def __init__(self, timeout=TIMEOUT) -> None:
         self.timeout = timeout
         self.session = requests.Session()
         self.session.headers.update(BROWSER_HEADERS)
 
-    # ---- text / chat ----
-
     def ask(self, message: str, model: str = DEFAULT_TEXT_MODEL,
             history: list | None = None, stream: bool = False) -> dict:
-        """Send a chat message.
-
-        history: optional [{"role": "user"|"assistant", "content": str}]
-        stream: if True, returns {"chunks": generator}; else {"response": str}
-
-        Returns {"response": str, "model": str} (non-streaming).
-        """
         message = (message or "").strip()
         if not message:
             raise PollinationsError("empty message")
@@ -112,7 +80,6 @@ class PollinationsClient:
         return {"response": text.strip(), "model": data.get("model", model)}
 
     def _iter_chunks(self, resp):
-        """Yield content deltas from an SSE stream."""
         for line in resp.iter_lines():
             if not line:
                 continue
@@ -134,7 +101,6 @@ class PollinationsClient:
                 yield content
 
     def ask_simple(self, prompt: str, model: str = DEFAULT_TEXT_MODEL) -> dict:
-        """One-shot GET text endpoint (no history)."""
         prompt = (prompt or "").strip()
         if not prompt:
             raise PollinationsError("empty prompt")
@@ -157,7 +123,6 @@ class PollinationsClient:
         return {"response": text, "model": model}
 
     def models(self) -> list:
-        """List available text models."""
         try:
             resp = self.session.get(TEXT_BASE + MODELS_PATH,
                                     impersonate="chrome136",
@@ -167,16 +132,9 @@ class PollinationsClient:
         except Exception as e:
             raise PollinationsError(f"models request failed: {e}") from e
 
-    # ---- image ----
-
     def image(self, prompt: str, width: int = 1024, height: int = 1024,
               model: str = DEFAULT_IMAGE_MODEL, seed: int | None = None,
               nologo: bool = True) -> dict:
-        """Generate an image.
-
-        Returns {"content": bytes, "content_type": str, "url": str}.
-        Raises PollinationsError on failure or non-image response.
-        """
         prompt = (prompt or "").strip()
         if not prompt:
             raise PollinationsError("empty image prompt")
