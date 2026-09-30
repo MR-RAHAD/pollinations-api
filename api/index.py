@@ -17,6 +17,18 @@ RATE_WINDOW = int(os.getenv("POLL_RATE_WINDOW_SECONDS", "60"))
 _hits: dict = {}
 
 
+def _load_system_prompt():
+    path = os.path.join(os.path.dirname(__file__), "..", "system prompt.txt")
+    try:
+        with open(path, encoding="utf-8") as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+SYSTEM_PROMPT = os.getenv("SYSTEM_PROMPT", "") or _load_system_prompt()
+
+
 def _check_api_key():
     allowed = set(API_KEYS)
     extra = os.environ.get("API_KEY", "").strip()
@@ -42,7 +54,7 @@ def index():
         "status": "ok",
         "upstream": "pollinations.ai",
         "endpoints": {
-            "/chat": "GET/POST {message, model?, history?}",
+            "/chat": "GET/POST {message, model?, history?, system_prompt?}",
             "/image": "GET/POST {prompt, width?, height?, model?, seed?, nologo?, format?}",
             "/models": "GET",
         },
@@ -59,6 +71,7 @@ def chat_post():
         message=(data.get("message") or "").strip(),
         history=data.get("history") or [],
         model=(data.get("model") or "openai").strip() or "openai",
+        system_prompt=(data.get("system_prompt") or "").strip() or None,
     )
 
 
@@ -79,10 +92,11 @@ def chat_get():
         message=(q.get("message") or "").strip(),
         history=history,
         model=(q.get("model") or "openai").strip() or "openai",
+        system_prompt=(q.get("system_prompt") or "").strip() or None,
     )
 
 
-def _do_chat(message, history, model):
+def _do_chat(message, history, model, system_prompt=None):
     if not message:
         return jsonify({"error": "missing 'message'"}), 400
 
@@ -91,7 +105,8 @@ def _do_chat(message, history, model):
 
     client = PollinationsClient()
     try:
-        result = client.ask(message, model=model, history=history)
+        result = client.ask(message, model=model, history=history,
+                            system_prompt=system_prompt or SYSTEM_PROMPT)
     except PollinationsError as e:
         status = 429 if "402" in str(e) else 502
         return jsonify({"error": str(e)}), status
